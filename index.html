@@ -1,46 +1,1077 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Calendario Windmar en Acción</title>
-<meta http-equiv="refresh" content="0; url=https://claude.ai/code/artifact/af17ee29-313e-4402-833f-61f060b675bd">
-<script>
-  window.location.replace("https://claude.ai/code/artifact/af17ee29-313e-4402-833f-61f060b675bd");
-</script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <style>
+  :root {
+    --bg: #F3F1FB;
+    --surface: #FFFFFF;
+    --surface-muted: #F7F6FC;
+    --border: #E3E0F2;
+    --ink: #201B3D;
+    --ink-soft: #6E6890;
+    --ink-faint: #A6A1C6;
+    --brand: #1F086E;
+    --brand-dark: #150650;
+    --accent: #F89B24;
+    --accent-ink: #4A2600;
+    --danger: #D9463C;
+    --ok: #2BA84A;
+    --cat-estatica: #2D6CDF;
+    --cat-reel: #F0524B;
+    --cat-carrusel: #2BA84A;
+    --cat-pendiente: #F89B24;
+    --shadow: 0 10px 30px rgba(31, 8, 110, 0.12);
+    --shadow-sm: 0 2px 8px rgba(31, 8, 110, 0.08);
+    --radius: 14px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #150F2E;
+      --surface: #1C1640;
+      --surface-muted: #221B4C;
+      --border: #362D66;
+      --ink: #EEEBFB;
+      --ink-soft: #B0A9DA;
+      --ink-faint: #726A9E;
+      --brand: #241058;
+      --brand-dark: #1A0B40;
+      --accent: #FFB454;
+      --accent-ink: #3A2100;
+      --shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.3);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #150F2E;
+    --surface: #1C1640;
+    --surface-muted: #221B4C;
+    --border: #362D66;
+    --ink: #EEEBFB;
+    --ink-soft: #B0A9DA;
+    --ink-faint: #726A9E;
+    --brand: #241058;
+    --brand-dark: #1A0B40;
+    --accent: #FFB454;
+    --accent-ink: #3A2100;
+    --shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.3);
+  }
+  :root[data-theme="light"] {
+    --bg: #F3F1FB;
+    --surface: #FFFFFF;
+    --surface-muted: #F7F6FC;
+    --border: #E3E0F2;
+    --ink: #201B3D;
+    --ink-soft: #6E6890;
+    --ink-faint: #A6A1C6;
+    --brand: #1F086E;
+    --brand-dark: #150650;
+    --accent: #F89B24;
+    --accent-ink: #4A2600;
+    --shadow: 0 10px 30px rgba(31, 8, 110, 0.12);
+    --shadow-sm: 0 2px 8px rgba(31, 8, 110, 0.08);
+  }
+
   * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
   body {
-    background: #1F086E;
-    color: #fff;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-variant-numeric: tabular-nums;
     min-height: 100vh;
+    overflow-x: hidden;
+  }
+  .app { display: flex; flex-direction: column; min-height: 100vh; }
+  button { font-family: inherit; cursor: pointer; }
+  button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  /* ---------- Topbar ---------- */
+  .topbar {
+    background: var(--brand-dark);
+    color: #fff;
+    padding: 14px 22px;
     display: flex;
     align-items: center;
-    justify-content: center;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    text-align: center;
-    padding: 24px;
+    gap: 18px;
+    flex-wrap: wrap;
   }
-  .box { max-width: 420px; }
-  h1 { font-size: 18px; margin-bottom: 10px; }
-  p { font-size: 14px; color: rgba(255,255,255,0.75); line-height: 1.5; margin-bottom: 18px; }
-  a {
-    display: inline-block;
-    background: #F89B24;
-    color: #4A2600;
+  .brand { display: flex; align-items: baseline; gap: 10px; white-space: nowrap; }
+  .brand b { font-size: 17px; letter-spacing: 0.03em; }
+  .brand em {
+    font-style: italic;
+    font-weight: 800;
+    color: var(--accent);
+    letter-spacing: 0.02em;
+  }
+  .brand span.sub {
+    font-size: 11px;
+    color: rgba(255,255,255,0.65);
+    letter-spacing: 0.08em;
+    border-left: 1px solid rgba(255,255,255,0.25);
+    padding-left: 10px;
+    margin-left: 2px;
+  }
+  .nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+  }
+  .nav .month-title {
     font-weight: 700;
-    font-size: 13.5px;
-    text-decoration: none;
-    padding: 10px 18px;
+    font-size: 14px;
+    letter-spacing: 0.06em;
+    min-width: 150px;
+    text-align: center;
+    text-transform: uppercase;
+  }
+  .icon-btn {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.16);
+    color: #fff;
+    width: 32px; height: 32px;
     border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px;
+    transition: background 0.15s ease;
+  }
+  .icon-btn:hover { background: rgba(255,255,255,0.18); }
+  .pill-btn {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.16);
+    color: #fff;
+    height: 32px;
+    padding: 0 14px;
+    border-radius: 9px;
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    transition: background 0.15s ease;
+  }
+  .pill-btn:hover { background: rgba(255,255,255,0.18); }
+  .cta-btn {
+    background: var(--accent);
+    color: var(--accent-ink);
+    border: none;
+    height: 34px;
+    padding: 0 16px;
+    border-radius: 9px;
+    font-size: 12.5px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    display: flex; align-items: center; gap: 6px;
+    box-shadow: var(--shadow-sm);
+    transition: filter 0.15s ease;
+  }
+  .cta-btn:hover { filter: brightness(1.06); }
+  .cta-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* ---------- Toolbar 2: legend + sync + backup ---------- */
+  .subbar {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 12px 22px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .legend { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .legend .legend-label {
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+  }
+  .legend-item {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--ink-soft);
+  }
+  .dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .subbar .stats {
+    margin-left: auto;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .subbar .stats b { color: var(--ink); }
+  .sync-badge {
+    display: flex; align-items: center; gap: 7px;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: var(--ink-soft);
+    white-space: nowrap;
+  }
+  .sync-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--ink-faint);
+    flex-shrink: 0;
+    position: relative;
+  }
+  .sync-badge.live .sync-dot { background: var(--ok); }
+  .sync-badge.live .sync-dot::after {
+    content: "";
+    position: absolute; inset: -4px;
+    border-radius: 50%;
+    border: 1.5px solid var(--ok);
+    animation: sync-pulse 2.2s ease-out infinite;
+  }
+  .sync-badge.offline .sync-dot { background: var(--accent); }
+  @keyframes sync-pulse {
+    0% { transform: scale(0.6); opacity: 0.9; }
+    100% { transform: scale(1.9); opacity: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .sync-badge.live .sync-dot::after { animation: none; }
+  }
+  .backup-actions { display: flex; gap: 8px; }
+  .ghost-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--ink-soft);
+    height: 30px;
+    padding: 0 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    display: flex; align-items: center; gap: 6px;
+    transition: border-color 0.15s ease, color 0.15s ease;
+  }
+  .ghost-btn:hover { border-color: var(--brand); color: var(--brand); }
+
+  .local-banner {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    background: color-mix(in srgb, var(--accent) 16%, var(--surface));
+    border-bottom: 1px solid var(--border);
+    padding: 9px 22px;
+    font-size: 12px;
+    color: var(--accent-ink);
+    font-weight: 600;
+  }
+  .local-banner.show { display: flex; }
+  :root[data-theme="dark"] .local-banner, @media (prefers-color-scheme: dark) { }
+
+  /* ---------- Calendar grid ---------- */
+  .cal-wrap { padding: 18px 22px 36px; flex: 1; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    background: var(--border);
+    gap: 1px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+  }
+  .weekday {
+    background: var(--surface-muted);
+    color: var(--ink-faint);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-align: left;
+    padding: 10px 12px;
+  }
+  .day {
+    background: var(--surface);
+    min-height: 108px;
+    display: flex;
+    flex-direction: column;
+    padding: 8px 8px 6px;
+    position: relative;
+  }
+  .day.out { background: var(--surface-muted); }
+  .day.today { box-shadow: inset 0 0 0 2px var(--accent); }
+  .day-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+  .day-num {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--ink-soft);
+  }
+  .day.out .day-num { color: var(--ink-faint); visibility: hidden; }
+  .day.today .day-num {
+    background: var(--accent);
+    color: var(--accent-ink);
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .add-btn {
+    background: transparent;
+    border: none;
+    color: var(--ink-faint);
+    width: 20px; height: 20px;
+    border-radius: 6px;
+    font-size: 14px;
+    line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .add-btn:hover { background: var(--surface-muted); color: var(--brand); }
+  .day.out .add-btn { visibility: hidden; }
+  .day-items {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    overflow-y: auto;
+    max-height: 132px;
+    padding-right: 2px;
+  }
+  .item-card {
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--cat-color, var(--brand));
+    background: var(--surface-muted);
+    border-radius: 7px;
+    padding: 5px 7px 6px;
+    text-align: left;
+    display: flex;
+    gap: 6px;
+    align-items: flex-start;
+    transition: filter 0.15s ease;
+  }
+  .item-card:hover { filter: brightness(0.97); }
+  :root[data-theme="dark"] .item-card:hover { filter: brightness(1.15); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .item-card:hover { filter: brightness(1.15); } }
+  .item-check {
+    appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    border: 1.5px solid var(--ink-faint);
+    flex-shrink: 0;
+    margin-top: 2px;
+    display: flex; align-items: center; justify-content: center;
+    background: transparent;
+    cursor: pointer;
+  }
+  .item-check.on {
+    background: var(--ok);
+    border-color: var(--ok);
+    color: #fff;
+    font-size: 9px;
+  }
+  .item-body { flex: 1; min-width: 0; cursor: pointer; background: none; border: none; text-align: left; padding: 0; color: inherit; font-family: inherit; }
+  .item-title {
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.25;
+    color: var(--ink);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .item-meta {
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    color: var(--cat-color, var(--brand));
+    margin-top: 2px;
+    text-transform: uppercase;
+  }
+  .item-meta span { color: var(--ink-faint); font-weight: 600; text-transform: none; }
+
+  .empty-state {
+    grid-column: 1 / -1;
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--ink-faint);
+    font-size: 13px;
+    font-weight: 600;
+    background: var(--surface);
+  }
+
+  /* ---------- Modal ---------- */
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(15, 8, 46, 0.55);
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+    z-index: 100;
+  }
+  .modal {
+    background: var(--surface);
+    border-radius: 16px;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: var(--shadow);
+    padding: 22px;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .modal h2 { font-size: 16px; font-weight: 800; margin-bottom: 16px; }
+  .field { margin-bottom: 14px; }
+  .field label {
+    display: block;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-bottom: 6px;
+  }
+  .field input[type="text"], .field input[type="date"] {
+    width: 100%;
+    border: 1px solid var(--border);
+    background: var(--surface-muted);
+    color: var(--ink);
+    border-radius: 9px;
+    padding: 9px 11px;
+    font-size: 13.5px;
+    font-family: inherit;
+  }
+  .field input:focus { border-color: var(--brand); }
+  .cat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .cat-chip {
+    border: 1.5px solid var(--border);
+    background: var(--surface-muted);
+    border-radius: 9px;
+    padding: 8px 6px;
+    display: flex; flex-direction: column; align-items: center; gap: 5px;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--ink-soft);
+  }
+  .cat-chip .dot { width: 12px; height: 12px; }
+  .cat-chip.active {
+    border-color: var(--cat-color);
+    background: color-mix(in srgb, var(--cat-color) 14%, var(--surface-muted));
+    color: var(--ink);
+  }
+  .toggle-row {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface-muted);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 10px 12px;
+  }
+  .switch {
+    width: 34px; height: 20px;
+    border-radius: 999px;
+    background: var(--border);
+    position: relative;
+    flex-shrink: 0;
+    border: none;
+    transition: background 0.15s ease;
+  }
+  .switch::after {
+    content: "";
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    transition: transform 0.15s ease;
+  }
+  .switch.on { background: var(--ok); }
+  .switch.on::after { transform: translateX(14px); }
+  .modal-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 18px;
+  }
+  .btn {
+    flex: 1;
+    height: 38px;
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 700;
+    border: none;
+  }
+  .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+  .btn-primary { background: var(--brand); color: #fff; }
+  .btn-primary:hover { background: var(--brand-dark); }
+  .btn-secondary { background: var(--surface-muted); color: var(--ink-soft); border: 1px solid var(--border); }
+  .btn-danger { background: transparent; color: var(--danger); border: 1px solid var(--danger); flex: 0 0 auto; padding: 0 14px; }
+  .err-msg { font-size: 11.5px; color: var(--danger); font-weight: 600; margin-top: -6px; margin-bottom: 12px; }
+  .confirm-box {
+    border: 1px solid var(--danger);
+    background: color-mix(in srgb, var(--danger) 10%, var(--surface));
+    border-radius: 9px;
+    padding: 10px 12px;
+    font-size: 12px;
+    color: var(--ink);
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .confirm-box .row { display: flex; gap: 8px; }
+
+  /* ---------- Toast ---------- */
+  .toast-stack {
+    position: fixed;
+    bottom: 18px;
+    right: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 200;
+  }
+  .toast {
+    background: var(--brand-dark);
+    color: #fff;
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 10px 14px;
+    border-radius: 9px;
+    box-shadow: var(--shadow);
+    animation: toast-in 0.18s ease-out;
+  }
+  @keyframes toast-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+
+  .foot-note {
+    padding: 0 22px 26px;
+    font-size: 11.5px;
+    color: var(--ink-faint);
+    line-height: 1.5;
+  }
+
+  input[type="file"] { display: none; }
+
+  @media (max-width: 720px) {
+    .day { min-height: 84px; }
+    .nav .month-title { min-width: 110px; font-size: 12px; }
+    .subbar { gap: 12px; }
   }
 </style>
-</head>
-<body>
-  <div class="box">
-    <h1>Abriendo el calendario en tiempo real…</h1>
-    <p>Si no se abre automáticamente, entra aquí:</p>
-    <a href="https://claude.ai/code/artifact/af17ee29-313e-4402-833f-61f060b675bd">Abrir calendario</a>
+
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <b>WINDMAR</b><em>EN ACCIÓN</em>
+      <span class="sub">CALENDARIO DE CONTENIDOS</span>
+    </div>
+    <div class="nav">
+      <button class="icon-btn" id="prevBtn" aria-label="Mes anterior" title="Mes anterior">←</button>
+      <div class="month-title" id="monthTitle"></div>
+      <button class="icon-btn" id="nextBtn" aria-label="Mes siguiente" title="Mes siguiente">→</button>
+      <button class="pill-btn" id="todayBtn">HOY</button>
+      <button class="cta-btn" id="addBtn">+ Agregar contenido</button>
+    </div>
+  </header>
+
+  <div class="local-banner" id="localBanner">
+    ⚠ No se pudo conectar al calendario compartido — revisa tu conexión a internet. Mientras tanto estás viendo una copia local que no se sincroniza.
   </div>
-</body>
-</html>
+
+  <div class="subbar">
+    <span class="legend-label">Leyenda</span>
+    <div class="legend" id="legend"></div>
+    <div class="sync-badge" id="syncBadge">
+      <span class="sync-dot"></span>
+      <span id="syncLabel">Conectando…</span>
+    </div>
+    <div class="backup-actions">
+      <button class="ghost-btn" id="exportBtn" title="Descargar una copia de respaldo en JSON">⭳ Exportar respaldo</button>
+    </div>
+    <div class="stats" id="stats"></div>
+  </div>
+
+  <main class="cal-wrap">
+    <div class="grid" id="grid"></div>
+  </main>
+
+  <p class="foot-note" id="footNote">
+    Los cambios que agregues, edites o marques como publicados se guardan en la nube y se ven al instante en
+    cualquier dispositivo que tenga este calendario abierto — no necesitas exportar ni importar nada.
+  </p>
+</div>
+
+<div id="modalRoot"></div>
+<div class="toast-stack" id="toastStack"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  var STORAGE_KEY = "windmar_calendario_contenidos_v1";
+  var COLLECTION_PATH = "items";
+
+  var CATEGORIES = {
+    estatica:  { label: "Estática",  color: "var(--cat-estatica)",  hex: "#2D6CDF" },
+    reel:      { label: "Reel",      color: "var(--cat-reel)",      hex: "#F0524B" },
+    carrusel:  { label: "Carrusel",  color: "var(--cat-carrusel)",  hex: "#2BA84A" },
+    pendiente: { label: "Pendiente", color: "var(--cat-pendiente)", hex: "#F89B24" }
+  };
+  var CATEGORY_ORDER = ["estatica", "reel", "carrusel", "pendiente"];
+  var WEEKDAYS = ["LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB", "DOM"];
+  var MONTHS = ["ENERO","FEBRERO","MARZO","ABRIL","MAYO","JUNIO","JULIO","AGOSTO","SEPTIEMBRE","OCTUBRE","NOVIEMBRE","DICIEMBRE"];
+
+  var db = null;
+  var usingDb = false;
+  var loaded = false;
+  var items = [];
+  var today = new Date();
+  var viewYear = today.getFullYear();
+  var viewMonth = today.getMonth();
+
+  function pad2(n) { return n < 10 ? "0" + n : "" + n; }
+  function toISO(y, m, d) { return y + "-" + pad2(m + 1) + "-" + pad2(d); }
+  function uid() { return "c-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8); }
+
+  function el(tag, attrs, children) {
+    var node = document.createElement(tag);
+    attrs = attrs || {};
+    Object.keys(attrs).forEach(function (k) {
+      if (k === "class") node.className = attrs[k];
+      else if (k === "text") node.textContent = attrs[k];
+      else if (k === "html") node.innerHTML = attrs[k];
+      else if (k.indexOf("on") === 0 && typeof attrs[k] === "function") node.addEventListener(k.slice(2), attrs[k]);
+      else node.setAttribute(k, attrs[k]);
+    });
+    (children || []).forEach(function (c) { if (c) node.appendChild(c); });
+    return node;
+  }
+
+  function showToast(msg) {
+    var stack = document.getElementById("toastStack");
+    var t = el("div", { class: "toast", text: msg });
+    stack.appendChild(t);
+    setTimeout(function () {
+      t.style.opacity = "0";
+      t.style.transition = "opacity 0.25s ease";
+      setTimeout(function () { t.remove(); }, 260);
+    }, 2600);
+  }
+
+  function setSyncState(state) {
+    var badge = document.getElementById("syncBadge");
+    var label = document.getElementById("syncLabel");
+    badge.className = "sync-badge" + (state === "live" ? " live" : state === "offline" ? " offline" : "");
+    label.textContent = state === "live" ? "En vivo — sincronizado" : state === "offline" ? "Sin conexión" : "Conectando…";
+  }
+
+  /* ---------- Local fallback storage (only used if db is unavailable) ---------- */
+  var seedItems = [
+    { id: "seed-1", date: "2026-08-01", title: "El mensaje del lunes", category: "estatica", tag: "Actitud", published: true, updatedAt: 1 },
+    { id: "seed-2", date: "2026-08-03", title: "Financiamientos que abren puertas", category: "estatica", tag: "Actualidad", published: true, updatedAt: 1 },
+    { id: "seed-3", date: "2026-08-10", title: "Top 5 del mes en Acción", category: "carrusel", tag: "Reconocimiento", published: false, updatedAt: 1 },
+    { id: "seed-4", date: "2026-08-12", title: "De vendedor a líder", category: "reel", tag: "Educación", published: false, updatedAt: 1 },
+    { id: "seed-5", date: "2026-08-19", title: "Dale play a tu semana", category: "reel", tag: "Comunidad", published: false, updatedAt: 1 },
+    { id: "seed-6", date: "2026-08-24", title: "Capítulo 03 · Mentalidad de cierre", category: "carrusel", tag: "Educación", published: false, updatedAt: 1 },
+    { id: "seed-7", date: "2026-08-26", title: "El cliente que confió en nosotros", category: "pendiente", tag: "Comunidad", published: false, updatedAt: 1 }
+  ];
+
+  function loadLocalState() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (parsed && Array.isArray(parsed.items)) return parsed.items;
+      }
+    } catch (e) {}
+    return seedItems.slice();
+  }
+
+  function saveLocalState() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ items: items, savedAt: Date.now() }));
+    } catch (e) {}
+  }
+
+  /* ---------- Persistence layer: Firebase when available, localStorage otherwise ---------- */
+  var FIREBASE_CONFIG = {
+    apiKey: "AIzaSyBNguX-SZU5xAVRFMGoub8bWxvwEYtVnG0",
+    authDomain: "windmar-calendario-accion.firebaseapp.com",
+    projectId: "windmar-calendario-accion",
+    storageBucket: "windmar-calendario-accion.firebasestorage.app",
+    messagingSenderId: "464672020474",
+    appId: "1:464672020474:web:400e3b2ffdc953c4dcb643"
+  };
+
+  function initPersistence() {
+    try {
+      if (typeof firebase === "undefined") { fallBackToLocal(); return; }
+      firebase.initializeApp(FIREBASE_CONFIG);
+      db = firebase.firestore();
+      usingDb = true;
+      subscribeToItems();
+    } catch (e) {
+      fallBackToLocal();
+    }
+  }
+
+  function fallBackToLocal() {
+    usingDb = false;
+    items = loadLocalState();
+    loaded = true;
+    document.getElementById("localBanner").classList.add("show");
+    setSyncState("offline");
+    renderAll();
+  }
+
+  function subscribeToItems() {
+    db.collection(COLLECTION_PATH).onSnapshot(function (snap) {
+      items = snap.docs.map(function (doc) {
+        var data = doc.data() || {};
+        data.id = doc.id;
+        return data;
+      });
+      loaded = true;
+      setSyncState("live");
+      renderAll();
+    }, function (err) {
+      setSyncState("offline");
+      showToast("Se perdió la conexión con el calendario compartido");
+    });
+  }
+
+  function persistUpsert(item) {
+    if (usingDb) {
+      return db.collection(COLLECTION_PATH).doc(item.id).set(item);
+    }
+    var idx = items.findIndex(function (it) { return it.id === item.id; });
+    if (idx >= 0) items[idx] = item; else items.push(item);
+    saveLocalState();
+    return Promise.resolve();
+  }
+
+  function persistPatch(id, patch) {
+    if (usingDb) {
+      return db.collection(COLLECTION_PATH).doc(id).update(patch);
+    }
+    var current = items.find(function (it) { return it.id === id; });
+    if (current) Object.assign(current, patch);
+    saveLocalState();
+    return Promise.resolve();
+  }
+
+  function persistDelete(id) {
+    if (usingDb) {
+      return db.collection(COLLECTION_PATH).doc(id).delete();
+    }
+    items = items.filter(function (it) { return it.id !== id; });
+    saveLocalState();
+    return Promise.resolve();
+  }
+
+  function itemsInMonth(y, m) {
+    var prefix = y + "-" + pad2(m + 1);
+    return items.filter(function (it) { return it.date && it.date.indexOf(prefix) === 0; });
+  }
+
+  function renderLegend() {
+    var legend = document.getElementById("legend");
+    legend.innerHTML = "";
+    CATEGORY_ORDER.forEach(function (key) {
+      var meta = CATEGORIES[key];
+      legend.appendChild(el("span", { class: "legend-item" }, [
+        el("span", { class: "dot", style: "background:" + meta.hex }),
+        el("span", { text: meta.label })
+      ]));
+    });
+  }
+
+  function renderStats() {
+    var monthItems = itemsInMonth(viewYear, viewMonth);
+    var published = monthItems.filter(function (it) { return it.published; }).length;
+    document.getElementById("stats").innerHTML =
+      "<b>" + published + "/" + monthItems.length + "</b> publicados este mes";
+  }
+
+  function renderGrid() {
+    var grid = document.getElementById("grid");
+    grid.innerHTML = "";
+
+    if (!loaded) {
+      grid.appendChild(el("div", { class: "empty-state", text: "Cargando calendario…" }));
+      return;
+    }
+
+    WEEKDAYS.forEach(function (d) {
+      grid.appendChild(el("div", { class: "weekday", text: d }));
+    });
+
+    var firstOfMonth = new Date(viewYear, viewMonth, 1);
+    var startOffset = (firstOfMonth.getDay() + 6) % 7;
+    var daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+    var totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
+    var isCurrentRealMonth = (viewYear === today.getFullYear() && viewMonth === today.getMonth());
+
+    for (var i = 0; i < totalCells; i++) {
+      var dayNum = i - startOffset + 1;
+      var inMonth = dayNum >= 1 && dayNum <= daysInMonth;
+
+      if (!inMonth) {
+        grid.appendChild(el("div", { class: "day out" }, [
+          el("div", { class: "day-head" }, [
+            el("span", { class: "day-num", text: "0" }),
+            el("button", { class: "add-btn", "aria-hidden": "true", tabindex: "-1", text: "+" })
+          ])
+        ]));
+        continue;
+      }
+
+      var iso = toISO(viewYear, viewMonth, dayNum);
+      var isToday = isCurrentRealMonth && dayNum === today.getDate();
+      var dayItems = items.filter(function (it) { return it.date === iso; });
+
+      var addBtn = el("button", { class: "add-btn", "aria-label": "Agregar contenido el " + dayNum, title: "Agregar contenido" });
+      addBtn.textContent = "+";
+      addBtn.addEventListener("click", (function (dateISO) {
+        return function () { openModal(null, dateISO); };
+      })(iso));
+
+      var head = el("div", { class: "day-head" }, [
+        el("span", { class: "day-num", text: String(dayNum) }),
+        addBtn
+      ]);
+
+      var list = el("div", { class: "day-items" });
+      dayItems.forEach(function (it) {
+        list.appendChild(renderItemCard(it));
+      });
+
+      var dayCell = el("div", { class: "day" + (isToday ? " today" : "") }, [head, list]);
+      grid.appendChild(dayCell);
+    }
+  }
+
+  function renderItemCard(it) {
+    var meta = CATEGORIES[it.category] || CATEGORIES.estatica;
+
+    var check = el("button", {
+      class: "item-check" + (it.published ? " on" : ""),
+      "aria-label": it.published ? "Marcar como pendiente" : "Marcar como publicado",
+      title: it.published ? "Publicado — clic para desmarcar" : "Marcar como publicado",
+      text: it.published ? "✓" : ""
+    });
+    check.addEventListener("click", function (ev) {
+      ev.stopPropagation();
+      var nextPublished = !it.published;
+      persistPatch(it.id, { published: nextPublished, updatedAt: Date.now() }).catch(function () {
+        showToast("No se pudo guardar el cambio");
+      });
+      if (!usingDb) renderAll();
+    });
+
+    var body = el("button", { class: "item-body" }, [
+      el("div", { class: "item-title", text: it.title }),
+      el("div", { class: "item-meta" }, [
+        document.createTextNode(meta.label),
+        el("span", { text: " · " + (it.tag || "") })
+      ])
+    ]);
+    body.addEventListener("click", function () { openModal(it.id, it.date); });
+
+    var card = el("div", { class: "item-card" }, [check, body]);
+    card.style.setProperty("--cat-color", meta.hex);
+    return card;
+  }
+
+  function renderAll() {
+    document.getElementById("monthTitle").textContent = MONTHS[viewMonth] + " " + viewYear;
+    renderLegend();
+    renderStats();
+    renderGrid();
+  }
+
+  /* ---------- Modal ---------- */
+  function openModal(id, defaultDate) {
+    var existing = id ? items.find(function (it) { return it.id === id; }) : null;
+    var draft = existing
+      ? Object.assign({}, existing)
+      : { id: null, date: defaultDate || toISO(today.getFullYear(), today.getMonth(), today.getDate()), title: "", category: "estatica", tag: "", published: false };
+
+    var root = document.getElementById("modalRoot");
+    root.innerHTML = "";
+
+    var titleInput = el("input", { type: "text", id: "f-title", value: draft.title, placeholder: "Ej. Historia de un cliente feliz" });
+    var dateInput = el("input", { type: "date", id: "f-date", value: draft.date });
+    var tagInput = el("input", { type: "text", id: "f-tag", value: draft.tag || "", placeholder: "Ej. Educación, Comunidad, Actitud..." });
+
+    var catGrid = el("div", { class: "cat-grid" });
+    CATEGORY_ORDER.forEach(function (key) {
+      var meta = CATEGORIES[key];
+      var chip = el("button", { class: "cat-chip" + (draft.category === key ? " active" : "") }, [
+        el("span", { class: "dot", style: "background:" + meta.hex }),
+        el("span", { text: meta.label })
+      ]);
+      chip.style.setProperty("--cat-color", meta.hex);
+      chip.dataset.cat = key;
+      chip.addEventListener("click", function () {
+        draft.category = this.dataset.cat;
+        catGrid.querySelectorAll(".cat-chip").forEach(function (c) { c.classList.toggle("active", c.dataset.cat === draft.category); });
+      });
+      catGrid.appendChild(chip);
+    });
+
+    var pubSwitch = el("button", { class: "switch" + (draft.published ? " on" : ""), "aria-label": "Marcar como publicado" });
+    pubSwitch.addEventListener("click", function () {
+      draft.published = !draft.published;
+      pubSwitch.classList.toggle("on", draft.published);
+    });
+
+    var errBox = el("div", { class: "err-msg", style: "display:none" }, []);
+
+    var deleteBtn = existing ? el("button", { class: "btn btn-danger", type: "button", text: "Eliminar" }) : null;
+    var confirmSlot = el("div");
+
+    if (deleteBtn) {
+      deleteBtn.addEventListener("click", function () {
+        confirmSlot.innerHTML = "";
+        var box = el("div", { class: "confirm-box" }, [
+          el("span", { text: "¿Eliminar «" + existing.title + "»? Esta acción no se puede deshacer." })
+        ]);
+        var row = el("div", { class: "row" });
+        var yes = el("button", { class: "btn btn-danger", type: "button", text: "Sí, eliminar" });
+        var no = el("button", { class: "btn btn-secondary", type: "button", text: "Cancelar" });
+        yes.addEventListener("click", function () {
+          yes.disabled = true; no.disabled = true;
+          persistDelete(existing.id).then(function () {
+            if (!usingDb) renderAll();
+            closeModal();
+            showToast("Contenido eliminado");
+          }).catch(function () {
+            showToast("No se pudo eliminar");
+            yes.disabled = false; no.disabled = false;
+          });
+        });
+        no.addEventListener("click", function () { confirmSlot.innerHTML = ""; });
+        row.appendChild(yes); row.appendChild(no);
+        box.appendChild(row);
+        confirmSlot.appendChild(box);
+      });
+    }
+
+    var cancelBtn = el("button", { class: "btn btn-secondary", type: "button", text: "Cancelar" });
+    cancelBtn.addEventListener("click", closeModal);
+
+    var saveBtn = el("button", { class: "btn btn-primary", type: "button", text: "Guardar" });
+    saveBtn.addEventListener("click", function () {
+      var titleVal = titleInput.value.trim();
+      var dateVal = dateInput.value;
+      if (!titleVal) {
+        errBox.textContent = "Escribe un título para el contenido.";
+        errBox.style.display = "block";
+        titleInput.focus();
+        return;
+      }
+      if (!dateVal) {
+        errBox.textContent = "Selecciona una fecha.";
+        errBox.style.display = "block";
+        return;
+      }
+      draft.title = titleVal;
+      draft.date = dateVal;
+      draft.tag = tagInput.value.trim();
+      draft.updatedAt = Date.now();
+      draft.id = draft.id || uid();
+
+      saveBtn.disabled = true;
+      persistUpsert(draft).then(function () {
+        if (!usingDb) renderAll();
+        viewYear = parseInt(dateVal.slice(0, 4), 10);
+        viewMonth = parseInt(dateVal.slice(5, 7), 10) - 1;
+        closeModal();
+        showToast(existing ? "Cambios guardados" : "Contenido agregado");
+      }).catch(function () {
+        errBox.textContent = "No se pudo guardar. Intenta de nuevo.";
+        errBox.style.display = "block";
+        saveBtn.disabled = false;
+      });
+    });
+
+    var actions = el("div", { class: "modal-actions" }, [deleteBtn, cancelBtn, saveBtn].filter(Boolean));
+
+    var modal = el("div", { class: "modal", role: "dialog", "aria-modal": "true" }, [
+      el("h2", { text: existing ? "Editar contenido" : "Agregar contenido" }),
+      el("div", { class: "field" }, [el("label", { text: "Título" }), titleInput]),
+      el("div", { class: "field" }, [el("label", { text: "Fecha" }), dateInput]),
+      el("div", { class: "field" }, [el("label", { text: "Categoría" }), catGrid]),
+      el("div", { class: "field" }, [el("label", { text: "Etiqueta / tema" }), tagInput]),
+      el("div", { class: "field" }, [
+        el("label", { text: "Estado" }),
+        el("div", { class: "toggle-row" }, [pubSwitch, el("span", { text: "Marcar como publicado" })])
+      ]),
+      errBox,
+      confirmSlot,
+      actions
+    ]);
+
+    var overlay = el("div", { class: "overlay" });
+    overlay.addEventListener("mousedown", function (ev) { if (ev.target === overlay) closeModal(); });
+    overlay.appendChild(modal);
+    root.appendChild(overlay);
+    titleInput.focus();
+
+    document.addEventListener("keydown", escListener);
+  }
+
+  function escListener(ev) {
+    if (ev.key === "Escape") closeModal();
+  }
+
+  function closeModal() {
+    document.getElementById("modalRoot").innerHTML = "";
+    document.removeEventListener("keydown", escListener);
+  }
+
+  /* ---------- Backup export (safety net, always available) ---------- */
+  function exportBackup() {
+    var payload = JSON.stringify({ items: items, exportedAt: Date.now() }, null, 2);
+    var filename = "calendario-contenidos-windmar-" + toISO(today.getFullYear(), today.getMonth(), today.getDate()) + ".json";
+    try {
+      var blob = new Blob([payload], { type: "application/json" });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+      showToast("Respaldo descargado");
+    } catch (e) {
+      showToast("No se pudo descargar el respaldo");
+    }
+  }
+
+  /* ---------- Wiring ---------- */
+  document.getElementById("prevBtn").addEventListener("click", function () {
+    viewMonth -= 1;
+    if (viewMonth < 0) { viewMonth = 11; viewYear -= 1; }
+    renderAll();
+  });
+  document.getElementById("nextBtn").addEventListener("click", function () {
+    viewMonth += 1;
+    if (viewMonth > 11) { viewMonth = 0; viewYear += 1; }
+    renderAll();
+  });
+  document.getElementById("todayBtn").addEventListener("click", function () {
+    viewYear = today.getFullYear();
+    viewMonth = today.getMonth();
+    renderAll();
+  });
+  document.getElementById("addBtn").addEventListener("click", function () {
+    var d = (viewYear === today.getFullYear() && viewMonth === today.getMonth())
+      ? toISO(today.getFullYear(), today.getMonth(), today.getDate())
+      : toISO(viewYear, viewMonth, 1);
+    openModal(null, d);
+  });
+  document.getElementById("exportBtn").addEventListener("click", exportBackup);
+
+  renderAll();
+  initPersistence();
+})();
+</script>
